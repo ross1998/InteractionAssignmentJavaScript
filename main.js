@@ -12,6 +12,8 @@ function Circle(game) {
     this.radius = 20;
     this.visualRadius = 500;
     this.colors = ["Red", "Green", "Blue", "White"];
+    this.frozen = false;
+    this.isDoctor = false;
     this.setNotIt();
     Entity.call(this, game, this.radius + Math.random() * (800 - this.radius * 2), this.radius + Math.random() * (800 - this.radius * 2));
 
@@ -28,15 +30,33 @@ Circle.prototype = new Entity();
 Circle.prototype.constructor = Circle;
 
 Circle.prototype.setIt = function () {
+    this.frozen = false;
     this.it = true;
     this.color = 0;
     this.visualRadius = 500;
 };
 
+Circle.prototype.setDoctor = function () {
+    this.isDoctor = true;
+    this.frozen = false
+    this.it = false;
+    this.color = 1;
+    this.visualRadius = 500;
+};
+
 Circle.prototype.setNotIt = function () {
+    this.frozen = false
     this.it = false;
     this.color = 3;
     this.visualRadius = 200;
+};
+
+Circle.prototype.setFrozen = function () {
+    this.frozen = true;
+    this.it = false;
+    this.color = 2;
+    this.visualRadius = 10;
+    //this.velocity = 1;
 };
 
 Circle.prototype.collide = function (other) {
@@ -62,10 +82,13 @@ Circle.prototype.collideBottom = function () {
 Circle.prototype.update = function () {
     Entity.prototype.update.call(this);
  //  console.log(this.velocity);
-
+    if(this.frozen){
+        this.x += 0;
+        this.y += 0;
+    }else{
     this.x += this.velocity.x * this.game.clockTick;
     this.y += this.velocity.y * this.game.clockTick;
-
+    }
     if (this.collideLeft() || this.collideRight()) {
         this.velocity.x = -this.velocity.x * friction;
         if (this.collideLeft()) this.x = this.radius;
@@ -82,6 +105,7 @@ Circle.prototype.update = function () {
         this.y += this.velocity.y * this.game.clockTick;
     }
 
+
     for (var i = 0; i < this.game.entities.length; i++) {
         var ent = this.game.entities[i];
         if (ent !== this && this.collide(ent)) {
@@ -97,6 +121,7 @@ Circle.prototype.update = function () {
             ent.x -= difX * delta / 2;
             ent.y -= difY * delta / 2;
 
+           
             this.velocity.x = ent.velocity.x * friction;
             this.velocity.y = ent.velocity.y * friction;
             ent.velocity.x = temp.x * friction;
@@ -105,19 +130,21 @@ Circle.prototype.update = function () {
             this.y += this.velocity.y * this.game.clockTick;
             ent.x += ent.velocity.x * this.game.clockTick;
             ent.y += ent.velocity.y * this.game.clockTick;
-            if (this.it) {
-                this.setNotIt();
-                ent.setIt();
+
+            if (this.it && ent.isDoctor !== true) {
+                //this.setNotIt();
+                ent.setFrozen();
             }
-            else if (ent.it) {
-                this.setIt();
+            else if (this.isDoctor && ent.it !== true) {
+                //this.setIt();
                 ent.setNotIt();
             }
         }
 
+        //collisions
         if (ent != this && this.collide({ x: ent.x, y: ent.y, radius: this.visualRadius })) {
             var dist = distance(this, ent);
-            if (this.it && dist > this.radius + ent.radius + 10) {
+            if (this.it && dist > this.radius + ent.radius + 10 && ent.frozen != true && ent.isDoctor != true) {
                 var difX = (ent.x - this.x)/dist;
                 var difY = (ent.y - this.y)/dist;
                 this.velocity.x += difX * acceleration / (dist*dist);
@@ -135,6 +162,18 @@ Circle.prototype.update = function () {
                 this.velocity.x -= difX * acceleration / (dist * dist);
                 this.velocity.y -= difY * acceleration / (dist * dist);
                 var speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+                if (speed > maxSpeed) {
+                    var ratio = maxSpeed / speed;
+                    this.velocity.x *= ratio;
+                    this.velocity.y *= ratio;
+                }
+            }
+            if (this.isDoctor && dist > this.radius + ent.radius + 10 && ent.frozen == true) {
+                var difX = (ent.x - this.x)/dist;
+                var difY = (ent.y - this.y)/dist;
+                this.velocity.x += difX * acceleration / (dist*dist);
+                this.velocity.y += difY * acceleration / (dist * dist);
+                var speed = Math.sqrt(this.velocity.x*this.velocity.x + this.velocity.y*this.velocity.y);
                 if (speed > maxSpeed) {
                     var ratio = maxSpeed / speed;
                     this.velocity.x *= ratio;
@@ -184,6 +223,10 @@ ASSET_MANAGER.downloadAll(function () {
         circle = new Circle(gameEngine);
         gameEngine.addEntity(circle);
     }
+    //Create Doctor 
+    circle = new Circle(gameEngine);
+    circle.setDoctor();
+    gameEngine.addEntity(circle);
     gameEngine.init(ctx);
     gameEngine.start();
 });
