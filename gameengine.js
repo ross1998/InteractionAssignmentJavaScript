@@ -30,6 +30,7 @@ Timer.prototype.tick = function () {
 
 function GameEngine() {
     this.entities = [];
+    this.list = [];
     this.showOutlines = false;
     this.ctx = null;
     this.click = null;
